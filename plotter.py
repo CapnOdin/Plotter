@@ -36,11 +36,15 @@ def GenerateGraphs(paths):
 		name = ntpath.basename(path)
 		csv = [line.split(",") for line in open(path, "r").read().split("\n")]
 		headers = csv[0]
-		x, y = zip(*[list(map(float, (line[0], line[1]))) for line in csv[1:] if line[0] != "" and line[1] != ""])
+		if(len(csv[1:][0]) == 2):
+			x, y = zip(*[list(map(float, (line[0], line[1]))) for line in csv[1:] if line[0] != "" and line[1] != ""])
+		else:
+			y = [float(line[0]) for line in csv[1:] if line[0] != ""]
+			x = range(len(y))
 		if(len(headers) == 3):
 			plots.append(ax.plot(x, y, '.-', label = name)) #, linewidth = 1, markersize = 2
 		elif(len(headers) > 3):
-			if(headers[3] == "average"):
+			if("average" in headers[3:]):
 				averagedY, offsetStart, offsetEnd = moving_average(y, 5)
 				#print(f"x len1: {len(x)}, len2: {len(x[offsetStart:-(offsetEnd)])}")
 				#print(f"y len1: {len(y)}, len2: {len(y[offsetStart:-(offsetEnd)])}")
@@ -51,6 +55,9 @@ def GenerateGraphs(paths):
 	ax.set(xlabel=headers[1], ylabel=headers[2], title=headers[0])
 	fig.savefig(getAvalableFilename(paths[0], "pdf"))
 	plt.show()
+
+def parseHeader(header, line1):
+	pass
 
 def main():
 	if(len(sys.argv) > 2):
