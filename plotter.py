@@ -24,40 +24,74 @@ def getAvalableFilename(path, ext):
 			i += 1
 		file = f"{path} ({i}).{ext}"
 	return file
-
+	
 def GenerateGraphs(paths):
 	plots = []
 	dpi = getDPI()
 	#fig, ax = plt.subplots(figsize=(1920/dpi, 1080/dpi), dpi=dpi)
 	fig, ax = plt.subplots(figsize=(3840/dpi, 2160/dpi), dpi=dpi)
 	ax.yaxis.grid()
-	headers = []
+	title = []
+	xlabel = []
+	ylabel = []
 	for path in paths:
 		name = ntpath.basename(path)
 		csv = [line.split(",") for line in open(path, "r").read().split("\n")]
 		headers = csv[0]
-		if(len(csv[1:][0]) == 2):
-			x, y = zip(*[list(map(float, (line[0], line[1]))) for line in csv[1:] if line[0] != "" and line[1] != ""])
-		else:
-			y = [float(line[0]) for line in csv[1:] if line[0] != ""]
-			x = range(len(y))
-		if(len(headers) == 3):
-			plots.append(ax.plot(x, y, '.-', label = name)) #, linewidth = 1, markersize = 2
-		elif(len(headers) > 3):
-			if("average" in headers[3:]):
+		graphs = parseGraphs(headers, csv[1:], name)
+		if(graphs["title"] not in title):
+			title.append(graphs["title"])
+		if(graphs["xlabel"] not in xlabel):
+			xlabel.append(graphs["xlabel"])
+		if(graphs["ylabel"] not in ylabel):
+			ylabel.append(graphs["ylabel"])
+	
+		for graph in graphs["graphs"]:
+			x = graph["x"]
+			y = graph["y"]
+			label = graph["label"]
+			if("average" in graphs["options"]):
 				averagedY, offsetStart, offsetEnd = moving_average(y, 5)
 				#print(f"x len1: {len(x)}, len2: {len(x[offsetStart:-(offsetEnd)])}")
 				#print(f"y len1: {len(y)}, len2: {len(y[offsetStart:-(offsetEnd)])}")
-				plots.append(ax.plot(x, y, '.', label = f"{name}"))
-				plots.append(ax.plot(x[offsetStart - 1:-offsetEnd], averagedY, '-', label = f"averaged-{name}"))
+				plots.append(ax.plot(x, y, '.', label = f"{label}"))
+				plots.append(ax.plot(x[offsetStart - 1:-offsetEnd], averagedY, '-', label = f"averaged-{label}"))
+			else:
+				plots.append(ax.plot(x, y, '.-', label = label))
+		
 	
 	ax.legend()
-	ax.set(xlabel=headers[1], ylabel=headers[2], title=headers[0])
+	ax.set(xlabel = "|".join(xlabel), ylabel = " | ".join(ylabel), title = " | ".join(title))
 	fig.savefig(getAvalableFilename(paths[0], "pdf"))
 	plt.show()
 
-def parseHeader(header, line1):
-	pass
+Options = ["average", "generateX"]
+
+def parseGraphs(header, rows, filename = ""):
+	graphs = {"graphs": [], "title": header[0], "xlabel": header[1], "ylabel": header[2], "options": []}
+	
+	num_columns = len(rows[0])
+	
+	i = 0
+	labels = [label for label in header[3:] if label not in Options]
+	graphs["options"].extend([option for option in header[3:] if option in Options])
+	x = []
+	
+	if(not len(labels)):
+		labels.append(filename)
+	
+	generateX = ("generateX" in header[3:]) or num_columns == 1
+	if(not generateX):
+		x = [float(column[0]) for column in rows]
+		i = 1
+	
+	for label in labels:
+		y = [float(column[i]) for column in rows]
+		if(generateX):
+			x = range(len(y))
+		graphs["graphs"].append({"x": x, "y": y, "label": label})
+		i += 1
+	return graphs
 
 def main():
 	if(len(sys.argv) > 2):
