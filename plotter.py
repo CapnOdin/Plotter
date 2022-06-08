@@ -1,6 +1,7 @@
 import sys, ntpath
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn import preprocessing
 
 #np.set_printoptions(threshold=sys.maxsize)
 
@@ -8,6 +9,9 @@ def moving_average(x, N, fill=True):
 	averaged = np.concatenate([x for x in [ [None]*(N // 2 + N % 2)*fill, np.convolve(x, np.ones((N,))/N, mode='valid'), [None]*(N // 2)*fill, ] if len(x)])
 	#print(f"a len1: {len(averaged)}, len2: {len(averaged[(N // 2 + N % 2):-(N // 2)])}")
 	return averaged[(N // 2 + N % 2):-(N // 2)], (N // 2 + N % 2), (N // 2)
+
+def NormalizeData(data):
+	return (data - np.min(data)) / (np.max(data) - np.min(data))
 
 def getDPI():
 	import tkinter
@@ -42,6 +46,9 @@ def GenerateGraphs(paths):
 		name = ntpath.basename(path)
 		csv = [line.split(",") for line in open(path, "r").read().split("\n")]
 		headers = csv[0]
+		if( not len(csv[1:])):
+			print(f"Skipped Empty File: {path}")
+			continue
 		graphs = parseGraphs(headers, csv[1:], name)
 		if(graphs["title"] and graphs["title"] not in title):
 			title.append(graphs["title"])
@@ -65,11 +72,19 @@ def GenerateGraphs(paths):
 			#	for i, xval in enumerate(x):
 			#		ax.annotate(y[i], (float(xval), float(ymin)), xytext = (float(xval), float(ymin) - (float(ymax) * 0.05)), horizontalalignment = 'right', verticalalignment = "top", rotation = 40, arrowprops={"arrowstyle": "->", "relpos": (1, 1)}, annotation_clip = False)
 			elif("average" in graphs["options"]):
-				averagedY, offsetStart, offsetEnd = moving_average(y, 5)
+				averagedY, offsetStart, offsetEnd = moving_average(y, 12)
 				#print(f"x len1: {len(x)}, len2: {len(x[offsetStart:-(offsetEnd)])}")
 				#print(f"y len1: {len(y)}, len2: {len(y[offsetStart:-(offsetEnd)])}")
 				plots.append(ax.plot(x, y, '.', label = f"{label}"))
-				plots.append(ax.plot(x[offsetStart - 1:-offsetEnd], averagedY, '-', label = f"averaged-{label}"))
+				plots.append(ax.plot(x[offsetStart - 1:-offsetEnd], averagedY, '-', label = f"averaged-{label}", color = plots[-1][0].get_color()))
+			elif("heatmap" in graphs["options"]):
+				im = ax.imshow(graph["m"])
+				fig.colorbar(im)
+				plots.append(plt)
+			elif("histogram" in graphs["options"]):
+				plots.append(ax.hist(y, bins = 50, facecolor = 'blue', alpha = 0.5, edgecolor = "white"))
+			elif("dots" in graphs["options"]):
+				plots.append(ax.plot(x, y, '.', label = label))
 			else:
 				plots.append(ax.plot(x, y, '.-', label = label))
 	
@@ -78,6 +93,9 @@ def GenerateGraphs(paths):
 		name = ntpath.basename(path)
 		csv = [line.split(",") for line in open(path, "r").read().split("\n")]
 		headers = csv[0]
+		if( not len(csv[1:])):
+			print(f"Skipped Empty File: {path}")
+			continue
 		graphs = parseGraphs(headers, csv[1:], name)
 		if(graphs["title"] and graphs["title"] not in title):
 			title.append(graphs["title"])
@@ -99,22 +117,33 @@ def GenerateGraphs(paths):
 	fig.savefig(getAvalableFilename(paths[0], "pdf"))
 	plt.show()
 
-Options = ["average", "generateX", "vline", "annotate"]
+Options = ["average", "generateX", "vline", "annotate", "dots", "heatmap", "normalize", "histogram"]
 
 def parseGraphs(header, rows, filename = ""):
 	graphs = {"graphs": [], "title": header[0], "xlabel": header[1], "ylabel": header[2], "options": []}
 	
 	num_columns = len(rows[0])
+	num_rows = len(rows)
 	i = 0
 	x = []
 	
 	labels = [label for label in header[3:] if label not in Options]
+	print(labels)
 	graphs["options"].extend([option for option in header[3:] if option in Options])
 	
 	vline = "vline" in graphs["options"]
 	annotate = "annotate" in graphs["options"]
 	generateX = ("generateX" in header[3:]) or num_columns == 1
+	heatmap = "heatmap" in header[3:]
 	
+	try:
+		non_str_rows = [list(map(float, x)) for x in rows]
+		
+		if("normalize" in header[3:]):
+			non_str_rows = [list(x) for x in NormalizeData(non_str_rows)]
+	except:
+		print("Could not convert to non str")
+		
 	if(not len(labels)):
 		labels.append(filename)
 	
@@ -128,12 +157,20 @@ def parseGraphs(header, rows, filename = ""):
 			y = [column[1] for column in rows]
 			graphs["graphs"].append({"x": x, "y": y, "label": label})
 			break
+		elif(heatmap):
+			m = np.array(np.array(list(map(float, rows[0]))))
+			for column in rows[1:]:
+				m = np.vstack([m, list(map(float, column))])
+			graphs["graphs"].append({"m": m, "x": "", "y": "", "label": label})
+			break
 		else:
-			y = [float(column[i]) for column in rows]
+			y = [float(column[i]) if len(column[i]) > 0 else 0.0 for column in rows if len(column) > i]
+			#y = [float(column[i]) for column in non_str_rows if len(column) > i]
 			if(generateX):
 				x = range(len(y))
 			graphs["graphs"].append({"x": x, "y": y, "label": label})
 			i += 1
+	print(graphs)
 	return graphs
 
 def main():
