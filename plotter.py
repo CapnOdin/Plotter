@@ -417,6 +417,13 @@ def GenerateGraphs(paths, outdir = "", title = ""):
 			xlabel.append(graphs["xlabel"])
 		if(graphs["ylabel"].strip() and graphs["ylabel"] not in ylabel):
 			ylabel.append(graphs["ylabel"])
+		
+		if("xAxisTicks" in graphs["options"]):
+			ax.set_xticks(graphs["graphs"][0]["ticks"], labels = graphs["graphs"][0]["labels"])
+			continue
+		elif("yAxisTicks" in graphs["options"]):
+			ax.set_yticks(graphs["graphs"][0]["ticks"], labels = graphs["graphs"][0]["labels"])
+			continue
 
 		for graph in graphs["graphs"]:
 			x = graph["x"]
@@ -576,6 +583,13 @@ def GenerateMultiGraphs(paths, orientation, outdir = "", title = "", interactive
 				print(f'\t{name = }, {graphs["title"] = }, {graphs["xlabel"] = }, {graphs["ylabel"] = }, {graphs["options"] = }')
 				#print(indent(pformat(graphs), "\t\t\t"))
 
+				if("xAxisTicks" in graphs["options"]):
+					ax.set_xticks(graphs["graphs"][0]["ticks"], labels = graphs["graphs"][0]["labels"])
+					continue
+				elif("yAxisTicks" in graphs["options"]):
+					ax.set_yticks(graphs["graphs"][0]["ticks"], labels = graphs["graphs"][0]["labels"])
+					continue
+
 				for graph in graphs["graphs"]:
 					x = graph["x"]
 					y = graph["y"]
@@ -698,7 +712,7 @@ def GenerateMultiGraphs(paths, orientation, outdir = "", title = "", interactive
 	if(interactive):
 		plt.show()
 
-Options = ["average", "generateX", "vline", "annotate", "dots", "crosses", "line", "heatmap", "normalize", "histogram", "bar", "unixtime", "vColourArea", "xAxisSized", "yAxisSized", "nolabel", "grouped", "marker", "colour"]
+Options = ["average", "generateX", "vline", "annotate", "dots", "crosses", "line", "heatmap", "normalize", "histogram", "bar", "unixtime", "vColourArea", "xAxisSized", "yAxisSized", "xAxisTicks", "yAxisTicks", "nolabel", "grouped", "marker", "colour"]
 
 def parseGraphs(header, rows, filename = ""):
 	try:
@@ -716,8 +730,10 @@ def parseGraphs(header, rows, filename = ""):
 		annotate = "annotate" in graphs["options"]
 		xAxisSized = "xAxisSized" in header[3:]
 		yAxisSized = "yAxisSized" in header[3:]
+		xAxisTicks = "xAxisTicks" in header[3:]
+		yAxisTicks = "yAxisTicks" in header[3:]
 		unixTimeStamp = "unixtime" in header[3:]
-		generateX = ("generateX" in header[3:]) or (num_columns == 1 and not xAxisSized and not yAxisSized and not unixTimeStamp)
+		generateX = ("generateX" in header[3:]) or (num_columns == 1 and not xAxisSized and not yAxisSized and not unixTimeStamp and not xAxisTicks and not yAxisTicks)
 		heatmap = "heatmap" in header[3:]
 		colourArea = "vColourArea" in header[3:]
 		nolabel = "nolabel" in header[3:]
@@ -764,6 +780,10 @@ def parseGraphs(header, rows, filename = ""):
 				for column in rows[1:]:
 					m = np.vstack([m, list(map(float, column))])
 				graphs["graphs"].append({"m": m, "x": "", "y": "", "label": label})
+				break
+			elif(xAxisTicks or yAxisTicks):
+				labels = column[1] if num_columns > 1 else None
+				graphs["graphs"].append({"ticks": x, "labels": labels, "label": label})
 				break
 			else:
 				if(not (colourArea and unixTimeStamp)):
