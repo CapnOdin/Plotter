@@ -10,6 +10,9 @@ import matplotlib.dates as md
 import matplotlib.transforms as mtrans
 from matplotlib.axes import Axes
 
+from matplotlib.lines import Line2D
+from matplotlib.collections import PathCollection
+
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -27,6 +30,8 @@ from datetime import timedelta
 def clamp(num, min_value, max_value):
 	num = max(min(num, max_value), min_value)
 	return num
+
+cumulativeLineOffset = 0
 
 @total_ordering
 class Orientation(Enum):
@@ -523,6 +528,7 @@ def GenerateGraphs(paths, outdir = "", title = ""):
 	plt.show()
 
 def GenerateMultiGraphs(paths, orientation, outdir = "", title = "", interactive: bool = False):
+	global cumulativeLineOffset
 	if(title):
 		fileName = title if type(title) == str else title[0]
 	else:
@@ -549,6 +555,7 @@ def GenerateMultiGraphs(paths, orientation, outdir = "", title = "", interactive
 		axs = [axs]
 
 	for j, ax in enumerate(axs):
+		plots.append([])
 		ax: Axes
 		ax.yaxis.grid(zorder = -50)
 		titles = []
@@ -562,6 +569,8 @@ def GenerateMultiGraphs(paths, orientation, outdir = "", title = "", interactive
 		annotations = [path for path in paths[j] if "annotate" in open(path, "r").readline()]
 		localpaths = [path for path in paths[j] if "annotate" not in open(path, "r").readline()]
 		
+		cumulativeLineOffset = 0
+
 		print(f"SubPlot {j}:")
 		
 		for path in localpaths:
@@ -599,12 +608,12 @@ def GenerateMultiGraphs(paths, orientation, outdir = "", title = "", interactive
 						color = next(ax._get_lines.prop_cycler)["color"]
 						print(f"\t\tvline: {color = }")
 						for pos in x:
-							plots.append(ax.axvline(pos, color = color, label = label, zorder = -100))
+							plots[-1].append(ax.axvline(pos, color = color, label = label, zorder = -100))
 					elif("vColourArea" in graphs["options"]):
 						color = next(ax._get_lines.prop_cycler)["color"]
 						print(f"\t\tvColourArea: {color = }")
 						for xval, yval in zip(x, y):
-							plots.append(ax.axvspan(xval, yval, color = color, alpha = 0.25, zorder = -100))
+							plots[-1].append(ax.axvspan(xval, yval, color = color, alpha = 0.25, zorder = -100))
 					elif("xAxisSized" in graphs["options"]):
 						xExplisitLim["min"].append(min(x))
 						xExplisitLim["max"].append(max(x))
@@ -617,45 +626,63 @@ def GenerateMultiGraphs(paths, orientation, outdir = "", title = "", interactive
 							#if(graphs["graphs"][0] != graph):
 							#	colours = plt.rcParams["axes.prop_cycle"].by_key()["color"]
 							#	ax2 = ax.twiny()
-							#	plots.append(ax2.plot(x, y, '.', label = f"{label}", color = colours[1]))
-							#	plots.append(ax2.plot(x[offsetStart - 1:-offsetEnd], averagedY, '-', label = f"averaged-{label}", color = plots[-1][0].get_color()))
+							#	plots[-1].append(ax2.plot(x, y, '.', label = f"{label}", color = colours[1]))
+							#	plots[-1].append(ax2.plot(x[offsetStart - 1:-offsetEnd], averagedY, '-', label = f"averaged-{label}", color = plots[-1][-1][0].get_color()))
 							#else:
-							plots.append(ax.plot(x, y, '.', label = f"{label}"))
-							plots.append(ax.plot(x[offsetStart - 1:-offsetEnd], averagedY, '-', label = f"averaged-{label}", color = plots[-1][0].get_color()))
+							plots[-1].append(ax.plot(x, y, '.', label = f"{label}"))
+							plots[-1].append(ax.plot(x[offsetStart - 1:-offsetEnd], averagedY, '-', label = f"averaged-{label}", color = plots[-1][-1][0].get_color()))
 						else:
-							plots.append(ax.plot(x[offsetStart - 1:-offsetEnd], averagedY, '-', label = f"averaged-{label}"))
+							plots[-1].append(ax.plot(x[offsetStart - 1:-offsetEnd], averagedY, '-', label = f"averaged-{label}"))
 					elif("marker" in graphs["options"]):
 						color = next(ax._get_lines.prop_cycler)["color"]
-						plots.append(ax.plot(x, y, '-', label = label, color = color))
-						plots.append(mscatter(x, y, ax = ax, markers = graph["marker"], color = color, clip_on = False))
+						plots[-1].append(ax.plot(x, y, '-', label = label, color = color))
+						plots[-1].append(mscatter(x, y, ax = ax, markers = graph["marker"], color = color, clip_on = False))
 					elif("colour" in graphs["options"]):
 						color = next(ax._get_lines.prop_cycler)["color"]
-						plots.append(ax.plot(x, y, '-', label = label, color = color))
-						plots.append(ax.scatter(x, y, c = graph["colour"], zorder = plots[-1][0].get_zorder() + 1, clip_on = False))
+						plots[-1].append(ax.plot(x, y, '-', label = label, color = color))
+						plots[-1].append(ax.scatter(x, y, c = graph["colour"], zorder = plots[-1][-1][0].get_zorder() + 1, clip_on = False))
 					elif("heatmap" in graphs["options"]):
 						im = ax.imshow(graph["m"])
 						fig.colorbar(im)
-						plots.append(plt)
+						plots[-1].append(plt)
 					elif("histogram" in graphs["options"]):
-						plots.append(ax.hist(y, bins = 5939, facecolor = 'blue', alpha = 0.5, edgecolor = "white"))
-						#plots.append(ax.hist(y, bins = 50, facecolor = 'blue', alpha = 0.5, edgecolor = "white", weights = y))
+						#plots[-1].append(ax.hist(y, bins = 5939, facecolor = 'blue', alpha = 0.5, edgecolor = "white"))
+						plots[-1].append(ax.hist(y, bins = 50, facecolor = 'blue', alpha = 0.5, edgecolor = "white", weights = y))
 					elif("bar" in graphs["options"]):
 						color = next(ax._get_lines.prop_cycler)["color"]
 						print(f"\t\tbar: {color = }")
-						plots.append(ax.bar(x, y, width = 0.001, alpha = 0.5, color = color, edgecolor = "white", label = label))
+						plots[-1].append(ax.bar(x, y, width = 0.001, alpha = 0.5, color = color, edgecolor = "white", label = label))
 					elif("dots" in graphs["options"]):
-						plots.append(ax.plot(x, y, '.', label = label))
+						plots[-1].append(ax.plot(x, y, '.', label = label))
 					elif("crosses" in graphs["options"]):
-						plots.append(ax.plot(x, y, 'x', label = label))
+						plots[-1].append(ax.plot(x, y, 'x', label = label))
 					elif("line" in graphs["options"]):
-						plots.append(ax.plot(x, y, '-', label = label))
+						plots[-1].append(ax.plot(x, y, '-', label = label))
 					else:
-						plots.append(ax.plot(x, y, '.-', label = label))
+						plots[-1].append(ax.plot(x, y, '.-', label = label))
 					xlim["min"].append(min(x))
 					xlim["max"].append(max(x))
 			except Exception as e:
 				print(f"Failed Plotting {path = }")
 				raise e
+		
+		if(cumulativeLineOffset):
+			plot: Line2D
+			offset = cumulativeLineOffset / 2
+			for plot in plots[-1]:
+				if(isinstance(plot, List)):
+					for plot2 in plot:
+						if(isinstance(plot2, Line2D)):
+							plot2.set_ydata([y - offset for y in plot2.get_ydata(orig = True)])
+			
+				if(isinstance(plot, PathCollection)):
+					plot: PathCollection
+					offsets = plot.get_offsets().data
+					plot.set_offsets(offsets + (0, -offset))
+					plot.set_zorder(plot.get_zorder() + 10)
+			
+			fig.canvas.draw()
+			fig.canvas.flush_events()
 
 		ymin, ymax = ax.get_ylim()
 		for path in annotations:
@@ -690,7 +717,7 @@ def GenerateMultiGraphs(paths, orientation, outdir = "", title = "", interactive
 					ano.set_clip_path(clippath)
 		
 		if(yExplisitLim["min"] or yExplisitLim["max"]):
-			ax.set_ylim(min(yExplisitLim["min"]) if yExplisitLim["min"] else None, max(yExplisitLim["max"]) if yExplisitLim["max"] else None)
+			ax.set_ylim(min(yExplisitLim["min"]) - (cumulativeLineOffset / 2) if yExplisitLim["min"] else None, max(yExplisitLim["max"]) + (cumulativeLineOffset / 2) if yExplisitLim["max"] else None)
 		if(xExplisitLim["min"] or xExplisitLim["max"]):
 			ax.set_xlim(min(xExplisitLim["min"]) if xExplisitLim["min"] else None, max(xExplisitLim["max"]) if xExplisitLim["max"] else None)
 		elif(len(annotations)):
@@ -712,9 +739,10 @@ def GenerateMultiGraphs(paths, orientation, outdir = "", title = "", interactive
 	if(interactive):
 		plt.show()
 
-Options = ["average", "generateX", "vline", "annotate", "dots", "crosses", "line", "heatmap", "normalize", "histogram", "bar", "unixtime", "vColourArea", "xAxisSized", "yAxisSized", "xAxisTicks", "yAxisTicks", "nolabel", "grouped", "marker", "colour"]
+Options = ["average", "generateX", "vline", "annotate", "dots", "crosses", "line", "heatmap", "normalize", "histogram", "bar", "unixtime", "vColourArea", "xAxisSized", "yAxisSized", "xAxisTicks", "yAxisTicks", "nolabel", "grouped", "marker", "colour", "offset"]
 
 def parseGraphs(header, rows, filename = ""):
+	global cumulativeLineOffset
 	try:
 		graphs = {"graphs": [], "title": header[0], "xlabel": header[1], "ylabel": header[2], "options": []}
 		
@@ -739,6 +767,7 @@ def parseGraphs(header, rows, filename = ""):
 		nolabel = "nolabel" in header[3:]
 		marker = "marker" in header[3:]
 		colour = "colour" in header[3:]
+		offset = "offset" in header[3:]
 		
 		#rows = [[x if x != "" and x != None else np.nan for x in row] for row in rows]
 		
@@ -755,7 +784,7 @@ def parseGraphs(header, rows, filename = ""):
 		
 		if(not generateX):
 			if(unixTimeStamp):
-				x = [dt.datetime.fromtimestamp(float(column[0]) / 1000.0, tz = dt.timezone.utc) for column in rows]
+				x = [dt.datetime.fromtimestamp(float(column[0]) / 1000.0, tz = dt.timezone.utc) if column[0] else np.nan for column in rows]
 				if(colourArea):
 					y = [dt.datetime.fromtimestamp(float(column[1]) / 1000.0, tz = dt.timezone.utc) for column in rows]
 			else:
@@ -797,6 +826,9 @@ def parseGraphs(header, rows, filename = ""):
 				if(colour):
 					graph["colour"] = colours
 				graphs["graphs"].append(graph)
+				if(offset):
+					graph["y"] = [y + cumulativeLineOffset for y in graph["y"]]
+					cumulativeLineOffset += 3
 				i += 1
 		
 		if(nolabel):
