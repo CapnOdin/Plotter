@@ -266,6 +266,27 @@ def GenerateMultiPlotlyGraphs(paths, orientation, outdir = "", title = "", inter
 				xlabel.append(graphs["xlabel"])
 			if(graphs["ylabel"] and graphs["ylabel"] not in ylabel):
 				ylabel.append(graphs["ylabel"])
+
+			if("xAxisTicks" in graphs["options"]):
+				arg = {f"xaxis{row if Orientation.VERTICAL else col}": 
+					dict(
+						tickmode = 'array',
+						tickvals = graphs["graphs"][0]["ticks"],
+						ticktext = graphs["graphs"][0]["labels"]
+					)
+				}
+				fig.update_layout(**arg)
+				continue
+			elif("yAxisTicks" in graphs["options"]):
+				arg = {f"yaxis{row if Orientation.VERTICAL else col}": 
+					dict(
+						tickmode = 'array',
+						tickvals = graphs["graphs"][0]["ticks"],
+						ticktext = graphs["graphs"][0]["labels"]
+					)
+				}
+				fig.update_layout(**arg)
+				continue
 		
 			for graph in graphs["graphs"]:
 				x = graph["x"]
@@ -353,8 +374,8 @@ def GenerateMultiPlotlyGraphs(paths, orientation, outdir = "", title = "", inter
 		#fig.update_xaxes(range = xaxis_range, type = 'category')
 		fig.update_xaxes(range = xaxis_range)
 
-	millis = (((max(xlim["max"]) - min(xlim["min"])) / 100)) / timedelta(milliseconds = 1)
-	fig.update_traces(selector = dict(type = "bar"), width = millis)
+	#millis = (((max(xlim["max"]) - min(xlim["min"])) / 100)) / timedelta(milliseconds = 1)
+	#fig.update_traces(selector = dict(type = "bar"), width = millis)
 
 	fig.update_xaxes(showgrid = False)
 
