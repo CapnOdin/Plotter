@@ -548,6 +548,14 @@ def GenerateGraphs(paths, outdir = "", title = ""):
 	#fig.savefig(getAvalableFilename(f"{outdir}{os.sep}{fileName}", "png"))
 	plt.show()
 
+import matplotlib.dates as mdates
+import matplotlib.units as munits
+
+converter = mdates.ConciseDateConverter()
+munits.registry[np.datetime64] = converter
+munits.registry[dt.date] = converter
+munits.registry[dt.datetime] = converter
+
 def GenerateMultiGraphs(paths, orientation, outdir = "", title = "", interactive: bool = False):
 	global cumulativeLineOffset
 	if(title):
