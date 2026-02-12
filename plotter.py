@@ -251,6 +251,10 @@ def GenerateMultiPlotlyGraphs(paths, orientation, outdir = "", title = "", inter
 		col = j + 1 if orientation == Orientation.HORIZONTAL else 1
 
 		colors = Colours(DEFAULT_PLOTLY_COLORS)
+
+		commonOptions = {
+			"hovertemplate": '<i>Value</i>: %{y}' + '<br><i>At</i>: %{x}<br>' + '<b>%{text}</b>'
+		}
 		
 		for path in localpaths:
 			name = ntpath.basename(path)
@@ -292,6 +296,8 @@ def GenerateMultiPlotlyGraphs(paths, orientation, outdir = "", title = "", inter
 				x = graph["x"]
 				y = graph["y"]
 				label = graph["label"]
+				if("tooltip" in graphs["options"]):
+					commonOptions["text"] = graph["tooltip"]
 				if("vline" in graphs["options"]):
 					color = colors.next()
 					print(f"\t\tvline: {color=:}")
@@ -364,7 +370,8 @@ def GenerateMultiPlotlyGraphs(paths, orientation, outdir = "", title = "", inter
 						y = y,
 						mode = 'lines+markers',
 						name = label,
-						line = dict(color = color)
+						line = dict(color = color),
+						**commonOptions
 					), row = row, col = col)
 				xlim["min"].append(min(x))
 				xlim["max"].append(max(x))
@@ -768,7 +775,7 @@ def GenerateMultiGraphs(paths, orientation, outdir = "", title = "", interactive
 	if(interactive):
 		plt.show()
 
-Options = ["average", "generateX", "vline", "annotate", "dots", "crosses", "line", "heatmap", "normalize", "histogram", "bar", "unixtime", "vColourArea", "xAxisSized", "yAxisSized", "xAxisTicks", "yAxisTicks", "nolabel", "grouped", "marker", "colour", "offset"]
+Options = ["average", "generateX", "vline", "annotate", "dots", "crosses", "line", "heatmap", "normalize", "histogram", "bar", "unixtime", "vColourArea", "xAxisSized", "yAxisSized", "xAxisTicks", "yAxisTicks", "nolabel", "grouped", "marker", "colour", "offset", "tooltip"]
 
 def parseGraphs(header, rows, filename = ""):
 	global cumulativeLineOffset
@@ -797,6 +804,7 @@ def parseGraphs(header, rows, filename = ""):
 		marker = "marker" in header[3:]
 		colour = "colour" in header[3:]
 		offset = "offset" in header[3:]
+		tooltip = "tooltip" in header[3:]
 		
 		#rows = [[x if x != "" and x != None else np.nan for x in row] for row in rows]
 		
@@ -824,6 +832,8 @@ def parseGraphs(header, rows, filename = ""):
 			markers = [column[-1] if len(column[-1]) > 0 else np.nan for column in rows if len(column)]
 		if(colour):
 			colours = [column[-1] if len(column[-1]) > 0 else np.nan for column in rows if len(column)]
+		if(tooltip):
+			tooltips = [column[-1] if len(column[-1]) > 0 else np.nan for column in rows if len(column)]
 		
 		for label in labels:
 			if(annotate):
@@ -854,6 +864,8 @@ def parseGraphs(header, rows, filename = ""):
 					graph["marker"] = markers
 				if(colour):
 					graph["colour"] = colours
+				if(tooltip):
+					graph["tooltip"] = tooltips
 				graphs["graphs"].append(graph)
 				if(offset):
 					graph["y"] = [y + cumulativeLineOffset for y in graph["y"]]
