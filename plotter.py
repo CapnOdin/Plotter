@@ -563,7 +563,7 @@ munits.registry[np.datetime64] = converter
 munits.registry[dt.date] = converter
 munits.registry[dt.datetime] = converter
 
-def GenerateMultiGraphs(paths, orientation, outdir = "", title = "", interactive: bool = False):
+def GenerateMultiGraphs(paths, orientation, outdir: str = "", title: str = "", sharedLegend: bool = False, interactive: bool = False):
 	global cumulativeLineOffset
 	if(title):
 		fileName = title if type(title) == str else title[0]
@@ -770,15 +770,20 @@ def GenerateMultiGraphs(paths, orientation, outdir = "", title = "", interactive
 			ax.ticklabel_format(useOffset = False, style = 'plain')
 		except:
 			pass
-
-		ax.legend()
+		
+		if(not sharedLegend):
+			ax.legend()
 		ax.set(xlabel = " | ".join(xlabel), ylabel = " | ".join(ylabel), title = getTitle(title, fileName, titles, j, indent = "\t\t"))
 		ax.set_axisbelow(True)
+	
+	if(sharedLegend):
+		fig.legend(loc = 'center left', bbox_to_anchor = (1, 0.5))
+	
 	if(title):
 		fig.canvas.manager.set_window_title(" ".join(title) if type(title) == list else title)
 	fig.tight_layout()
 	#fig.savefig(getAvalableFilename(f"{outdir}{os.sep}{fileName}", "pdf"))
-	fig.savefig(getAvalableFilename(f"{outdir}{os.sep}{fileName}", "png"))
+	fig.savefig(getAvalableFilename(f"{outdir}{os.sep}{fileName}", "png"), bbox_inches = "tight")
 	if(interactive):
 		plt.show()
 
@@ -905,6 +910,7 @@ def main(raw_args: List[str] = None):
 	
 	mulPlotCmd = subparsers.add_parser("multiplot", description = "Plot csv files.", parents = [shared])
 	mulPlotCmd.add_argument("--ver", action = "store_true", help = 'Sets the orientation of the multiplot to vertical otherwise it will be horizontal.')
+	mulPlotCmd.add_argument("--sharedLegend", action = "store_true", help = 'Combines the legends of the subplots.')
 	mulPlotCmd.add_argument("-p", "--paths", metavar = "PATH", action = "append", nargs = "+", required = True, help = 'The csv files to plot.')
 
 	mulPlotlyCmd = subparsers.add_parser("multiPlotly", description = "Plot csv files.", parents = [shared])
@@ -922,7 +928,7 @@ def main(raw_args: List[str] = None):
 			GenerateMultiPlotlyGraphs([args.paths], orientation = Orientation.VERTICAL, outdir = args.outdir, title = args.title, interactive = args.interactive)
 		elif(args.command == "multiplot"):
 			orientation = Orientation.VERTICAL if args.ver else Orientation.HORIZONTAL
-			GenerateMultiGraphs(args.paths, orientation = orientation, outdir = args.outdir, title = args.title, interactive = args.interactive)
+			GenerateMultiGraphs(args.paths, orientation = orientation, outdir = args.outdir, title = args.title, sharedLegend = args.sharedLegend, interactive = args.interactive)
 		elif(args.command == "multiPlotly"):
 			orientation = Orientation.VERTICAL if args.ver else Orientation.HORIZONTAL
 			GenerateMultiPlotlyGraphs(args.paths, orientation = orientation, outdir = args.outdir, title = args.title, interactive = args.interactive)
