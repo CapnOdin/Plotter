@@ -575,6 +575,13 @@ def GenerateMultiGraphs(paths, orientation, outdir = "", title = "", interactive
 	
 	plots = []
 	dpi = getDPI()
+
+	scaleUI = 1.0
+
+	plt.rcParams["font.size"] = plt.rcParams["font.size"] * scaleUI
+	plt.rcParams["lines.linewidth"] = plt.rcParams["lines.linewidth"] * scaleUI
+	plt.rcParams["lines.markersize"] = plt.rcParams["lines.markersize"] * scaleUI
+
 	if(orientation == Orientation.VERTICAL):
 		fig, axs = plt.subplots(len(paths), figsize = (1920 / dpi, 1080 / dpi), dpi = dpi)
 		#fig, axs = plt.subplots(len(paths), figsize = (3840 / dpi, 2160 / dpi), dpi = dpi)
