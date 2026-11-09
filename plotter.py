@@ -647,13 +647,12 @@ def GenerateMultiGraphs(paths, orientation, outdir: str = "", title: str = "", s
 					y = graph["y"]
 					label = graph["label"]
 					if("vline" in graphs["options"]):
-						# TODO: try using ax._get_lines.get_next_color() see if it works in all cases
-						color = next(ax._get_lines.prop_cycler)["color"]
+						color = ax._get_lines.get_next_color()
 						print(f"\t\tvline: {color = }")
 						for pos in x:
 							plots[-1].append(ax.axvline(pos, color = color, label = label, zorder = -100))
 					elif("vColourArea" in graphs["options"]):
-						color = next(ax._get_lines.prop_cycler)["color"]
+						color = ax._get_lines.get_next_color()
 						print(f"\t\tvColourArea: {color = }")
 						for xval, yval in zip(x, y):
 							plots[-1].append(ax.axvspan(xval, yval, color = color, alpha = 0.25, zorder = -100))
@@ -677,11 +676,11 @@ def GenerateMultiGraphs(paths, orientation, outdir: str = "", title: str = "", s
 						else:
 							plots[-1].append(ax.plot(x[offsetStart - 1:-offsetEnd], averagedY, '-', label = f"averaged-{label}"))
 					elif("marker" in graphs["options"]):
-						color = next(ax._get_lines.prop_cycler)["color"]
+						color = ax._get_lines.get_next_color()
 						plots[-1].append(ax.plot(x, y, '-', label = label, color = color))
 						plots[-1].append(mscatter(x, y, ax = ax, markers = graph["marker"], color = color, clip_on = False))
 					elif("colour" in graphs["options"]):
-						color = next(ax._get_lines.prop_cycler)["color"]
+						color = ax._get_lines.get_next_color()
 						plots[-1].append(ax.plot(x, y, '-', label = label, color = color))
 						plots[-1].append(ax.scatter(x, y, c = graph["colour"], zorder = plots[-1][-1][0].get_zorder() + 1, clip_on = False))
 					elif("heatmap" in graphs["options"]):
@@ -692,7 +691,7 @@ def GenerateMultiGraphs(paths, orientation, outdir: str = "", title: str = "", s
 						#plots[-1].append(ax.hist(y, bins = 5939, facecolor = 'blue', alpha = 0.5, edgecolor = "white"))
 						plots[-1].append(ax.hist(y, bins = 50, facecolor = 'blue', alpha = 0.5, edgecolor = "white", weights = y))
 					elif("bar" in graphs["options"]):
-						color = next(ax._get_lines.prop_cycler)["color"]
+						color = ax._get_lines.get_next_color()
 						print(f"\t\tbar: {color = }")
 						plots[-1].append(ax.bar(x, y, width = 0.001, alpha = 0.5, color = color, edgecolor = "white", label = label))
 					elif("dots" in graphs["options"]):
@@ -752,7 +751,7 @@ def GenerateMultiGraphs(paths, orientation, outdir: str = "", title: str = "", s
 				x = graph["x"]
 				y = graph["y"]
 				label = graph["label"]
-				colour = next(ax._get_lines.prop_cycler)['color']
+				colour = ax._get_lines.get_next_color()
 				xlim["min"].append(min(x))
 				xlim["max"].append(max(x))
 				for i, xval in enumerate(x):
